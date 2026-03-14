@@ -11,6 +11,7 @@ import { MOCK_NOTIFICATIONS, CURRENT_USER } from "@/data/mockData";
 interface Props {
   user: User | null;
   onLogout: () => void;
+  onUserUpdate: (user: User, rawUser: Record<string, unknown>) => void;
 }
 
 const tabs: { id: AppTab; label: string; icon: string; desc: string }[] = [
@@ -21,7 +22,7 @@ const tabs: { id: AppTab; label: string; icon: string; desc: string }[] = [
   { id: "profile", label: "Профиль", icon: "User", desc: "Мой аккаунт" },
 ];
 
-export default function MainApp({ user, onLogout }: Props) {
+export default function MainApp({ user, onLogout, onUserUpdate }: Props) {
   const [activeTab, setActiveTab] = useState<AppTab>("discover");
   const unreadNotifs = MOCK_NOTIFICATIONS.filter(n => !n.read).length;
   const profile = user || CURRENT_USER;
@@ -32,7 +33,7 @@ export default function MainApp({ user, onLogout }: Props) {
       case "matches": return <MatchesTab onOpenChat={() => setActiveTab("chats")} />;
       case "chats": return <ChatsTab />;
       case "notifications": return <NotificationsTab />;
-      case "profile": return <ProfileTab user={user} onLogout={onLogout} />;
+      case "profile": return <ProfileTab user={user} onLogout={onLogout} onUserUpdate={onUserUpdate} />;
     }
   };
 

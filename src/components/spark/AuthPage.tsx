@@ -6,7 +6,7 @@ import { mapApiUser } from "@/pages/Index";
 
 interface Props {
   mode: 'login' | 'register';
-  onSuccess: (user: User) => void;
+  onSuccess: (user: User, rawUser: Record<string, unknown>) => void;
   onBack: () => void;
   onSwitchMode: () => void;
 }
@@ -53,7 +53,7 @@ export default function AuthPage({ mode, onSuccess, onBack, onSwitchMode }: Prop
           interests: selectedInterests,
         });
         setToken(data.token);
-        onSuccess(mapApiUser(data.user));
+        onSuccess(mapApiUser(data.user), data.user);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : "Ошибка регистрации");
       } finally {
@@ -68,7 +68,7 @@ export default function AuthPage({ mode, onSuccess, onBack, onSwitchMode }: Prop
     try {
       const data = await api.login(form.email, form.password);
       setToken(data.token);
-      onSuccess(mapApiUser(data.user));
+      onSuccess(mapApiUser(data.user), data.user);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Ошибка входа");
     } finally {
