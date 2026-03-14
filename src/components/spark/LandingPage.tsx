@@ -76,9 +76,9 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
             <span className="text-sm text-white/70">Более 2 миллионов пользователей</span>
           </div>
 
-          <h1 className="font-golos font-black text-6xl lg:text-7xl leading-tight mb-6 text-white">
+          <h1 className="font-golos font-black text-4xl sm:text-5xl lg:text-7xl leading-tight mb-6 text-white">
             Найди свою{" "}
-            <span className="gradient-text font-caveat text-7xl lg:text-8xl">искру</span>
+            <span className="gradient-text font-caveat text-5xl sm:text-6xl lg:text-8xl">искру</span>
           </h1>
           <p className="text-white/60 text-xl mb-10 leading-relaxed max-w-lg">
             Умный алгоритм подбора, верифицированные профили и безопасная среда для настоящих знакомств
@@ -108,7 +108,7 @@ export default function LandingPage({ onLogin, onRegister }: Props) {
         </div>
 
         {/* Card deck preview */}
-        <div className="relative flex justify-center animate-float">
+        <div className="hidden lg:flex relative justify-center animate-float">
           <div className="relative w-72 h-[480px]">
             {cards.map((card, i) => (
               <div

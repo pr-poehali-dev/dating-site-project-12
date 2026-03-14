@@ -37,7 +37,8 @@ export default function NotificationsTab() {
   const unread = notifications.filter(n => !n.read).length;
 
   return (
-    <div className="h-[calc(100vh-130px)] overflow-y-auto px-4 py-4">
+    <div className="h-[calc(100vh-130px)] md:h-[calc(100vh-81px)] overflow-y-auto px-4 md:px-8 py-4 md:py-6">
+      <div className="max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-5">
         <div>
           <h2 className="text-white font-bold text-xl">Уведомления</h2>
@@ -99,6 +100,7 @@ export default function NotificationsTab() {
           <p className="text-white/40">Уведомлений пока нет</p>
         </div>
       )}
+      </div>
     </div>
   );
 }
