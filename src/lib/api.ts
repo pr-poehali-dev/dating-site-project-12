@@ -1,5 +1,6 @@
 const AUTH_URL = "https://functions.poehali.dev/5cd52467-27fa-472a-bdbb-3e1dbb8a8c4a";
 const UPLOAD_URL = "https://functions.poehali.dev/12adb36e-3485-4427-97a0-dcba84d159c8";
+const DISCOVER_URL = "https://functions.poehali.dev/6e078de9-4244-43f9-a79d-8bad28de9e90";
 const TOKEN_KEY = "spark_session_token";
 const USER_KEY = "spark_cached_user";
 
@@ -65,6 +66,27 @@ export const api = {
     bio?: string;
     interests?: string[];
   }) => call({ action: "update_profile", ...params }, true),
+
+  getDiscoverUsers: async (): Promise<Record<string, unknown>[]> => {
+    const res = await fetch(DISCOVER_URL, {
+      method: "GET",
+      headers: { "X-Session-Token": getToken() },
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Ошибка");
+    return data.users;
+  },
+
+  swipe: async (toUserId: number, type: "like" | "dislike" | "super_like") => {
+    const res = await fetch(DISCOVER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Session-Token": getToken() },
+      body: JSON.stringify({ action: "swipe", to_user_id: toUserId, type }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Ошибка");
+    return data;
+  },
 
   uploadAvatar: async (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {

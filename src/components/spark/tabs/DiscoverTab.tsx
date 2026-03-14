@@ -1,16 +1,21 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 import { User } from "@/types/spark";
 import { DISCOVER_CARDS } from "@/data/mockData";
+import { api, getToken } from "@/lib/api";
+import { mapApiUser } from "@/pages/Index";
 
 type SwipeDir = "left" | "right" | "up" | null;
 
 interface MatchPopup {
-  user: User;
+  user: { name: string; avatar: string };
 }
 
 export default function DiscoverTab() {
-  const [cards, setCards] = useState(DISCOVER_CARDS);
+  const [cards, setCards] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [usingReal, setUsingReal] = useState(false);
+
   const [swipeDir, setSwipeDir] = useState<SwipeDir>(null);
   const [activePhoto, setActivePhoto] = useState(0);
   const [showMatch, setShowMatch] = useState<MatchPopup | null>(null);
@@ -19,27 +24,68 @@ export default function DiscoverTab() {
   const [dragging, setDragging] = useState(false);
   const dragStart = useRef(0);
 
+  useEffect(() => {
+    if (!getToken()) {
+      setCards(DISCOVER_CARDS);
+      setLoading(false);
+      return;
+    }
+    api.getDiscoverUsers()
+      .then(users => {
+        if (users.length > 0) {
+          setCards(users.map(u => mapApiUser(u)));
+          setUsingReal(true);
+        } else {
+          // Нет реальных пользователей — показываем моковых
+          setCards(DISCOVER_CARDS);
+        }
+      })
+      .catch(() => setCards(DISCOVER_CARDS))
+      .finally(() => setLoading(false));
+  }, []);
+
   const currentCard = cards[0];
 
   const handleSwipe = (dir: SwipeDir) => {
     if (!currentCard || swipeDir) return;
     setSwipeDir(dir);
-    if (dir === "right") {
-      setTimeout(() => {
-        setShowMatch({ user: currentCard });
-        nextCard();
-      }, 400);
-    } else {
-      setTimeout(nextCard, 450);
-    }
+
+    const doSwipe = async () => {
+      // Отправляем на сервер только если реальный пользователь
+      if (usingReal && currentCard.id && !currentCard.id.startsWith("mock")) {
+        try {
+          const swipeType = dir === "right" ? "like" : dir === "up" ? "super_like" : "dislike";
+          const result = await api.swipe(parseInt(currentCard.id), swipeType);
+          if (result.match && result.match_user) {
+            setShowMatch({ user: result.match_user });
+          }
+        } catch { /* тихо игнорируем */ }
+      } else if (dir === "right") {
+        setShowMatch({ user: { name: currentCard.name, avatar: currentCard.avatar } });
+      }
+      nextCard();
+    };
+
+    setTimeout(doSwipe, 400);
   };
 
   const nextCard = () => {
-    setCards(prev => [...prev.slice(1), prev[0]]);
+    setCards(prev => prev.slice(1));
     setSwipeDir(null);
     setDragX(0);
     setActivePhoto(0);
     setShowDetail(false);
+  };
+
+  const reloadCards = () => {
+    setLoading(true);
+    api.getDiscoverUsers()
+      .then(users => {
+        setCards(users.length > 0 ? users.map(u => mapApiUser(u)) : DISCOVER_CARDS);
+        setUsingReal(users.length > 0);
+      })
+      .catch(() => setCards(DISCOVER_CARDS))
+      .finally(() => setLoading(false));
   };
 
   const onDragStart = (e: React.MouseEvent | React.TouchEvent) => {
@@ -60,16 +106,39 @@ export default function DiscoverTab() {
     else setDragX(0);
   };
 
-  if (!currentCard) return (
-    <div className="flex flex-col items-center justify-center h-full gap-4">
-      <span className="text-6xl">🔄</span>
-      <p className="text-white/50">Загружаем новые анкеты...</p>
-    </div>
-  );
-
   const rotation = dragging ? dragX * 0.08 : 0;
   const likeOpacity = Math.max(0, Math.min(1, dragX / 80));
   const nopeOpacity = Math.max(0, Math.min(1, -dragX / 80));
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-130px)] md:h-[calc(100vh-81px)] gap-4">
+        <div className="w-16 h-16 rounded-3xl btn-gradient flex items-center justify-center animate-pulse">
+          <Icon name="Flame" size={28} className="text-white" />
+        </div>
+        <p className="text-white/40 text-sm">Ищем людей рядом...</p>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (!currentCard) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-130px)] md:h-[calc(100vh-81px)] gap-4 px-8 text-center">
+        <div className="text-6xl mb-2">🎉</div>
+        <h3 className="text-white font-bold text-xl">Ты просмотрел всех!</h3>
+        <p className="text-white/40 text-sm leading-relaxed">
+          Новые пользователи появятся позже.<br />Загляни снова чуть позже.
+        </p>
+        <button onClick={reloadCards}
+          className="btn-gradient text-white font-semibold px-6 py-3 rounded-2xl flex items-center gap-2 mt-2">
+          <Icon name="RefreshCw" size={18} />
+          Обновить
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-[calc(100vh-130px)] md:h-[calc(100vh-81px)] overflow-hidden">
@@ -77,7 +146,7 @@ export default function DiscoverTab() {
       {/* ── LEFT: Stories + Card stack ── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-        {/* Stories row */}
+        {/* Stories / avatars row */}
         <div className="flex gap-3 px-4 py-3 overflow-x-auto scrollbar-hide flex-shrink-0">
           <div className="flex-shrink-0 flex flex-col items-center gap-1">
             <div className="w-14 h-14 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center bg-white/5">
@@ -96,11 +165,19 @@ export default function DiscoverTab() {
           ))}
         </div>
 
+        {/* Real users badge */}
+        {usingReal && (
+          <div className="flex items-center gap-1.5 px-4 pb-1">
+            <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-ping-slow" />
+            <span className="text-green-400/70 text-xs">Реальные пользователи</span>
+          </div>
+        )}
+
         {/* Card stack */}
         <div className="flex-1 relative px-4 pb-2">
           {/* Background cards */}
           {cards.slice(1, 3).map((card, i) => (
-            <div key={card.id} className="absolute inset-4 rounded-3xl overflow-hidden"
+            <div key={card.id + i} className="absolute inset-4 rounded-3xl overflow-hidden"
               style={{
                 transform: `scale(${0.97 - i * 0.03}) translateY(${(i + 1) * 6}px)`,
                 zIndex: 2 - i,
@@ -152,7 +229,7 @@ export default function DiscoverTab() {
                 <div onClick={() => setActivePhoto(p => Math.min(currentCard.photos.length - 1, p + 1))} />
               </div>
 
-              {/* LIKE / NOPE indicators */}
+              {/* LIKE / NOPE */}
               <div className="absolute top-12 left-6 rounded-2xl border-4 border-green-400 px-4 py-2 rotate-[-20deg] transition-opacity"
                 style={{ opacity: likeOpacity }}>
                 <span className="text-green-400 font-black text-2xl">LIKE</span>
@@ -162,13 +239,12 @@ export default function DiscoverTab() {
                 <span className="text-red-400 font-black text-2xl">NOPE</span>
               </div>
 
-              {/* Gradient overlay */}
+              {/* Gradient */}
               <div className="absolute inset-0 pointer-events-none"
                 style={{ background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.2) 40%, transparent 60%)" }} />
 
               {/* Info */}
               <div className="absolute bottom-0 left-0 right-0 p-5">
-                {/* Badges */}
                 <div className="flex gap-2 mb-2">
                   {currentCard.verified && (
                     <span className="glass rounded-full px-2 py-0.5 text-xs flex items-center gap-1 text-blue-300">
@@ -189,10 +265,10 @@ export default function DiscoverTab() {
 
                 <div className="flex items-end justify-between mb-2">
                   <div>
-                    <h2 className="text-white font-bold text-3xl">{currentCard.name}, {currentCard.age}</h2>
+                    <h2 className="text-white font-bold text-3xl">{currentCard.name}, {currentCard.age || "?"}</h2>
                     <div className="flex items-center gap-1 text-white/60 text-sm">
                       <Icon name="MapPin" size={13} />
-                      <span>{currentCard.city}{currentCard.distance ? ` · ${currentCard.distance} км` : ""}</span>
+                      <span>{currentCard.city}</span>
                     </div>
                   </div>
                   <button onClick={() => setShowDetail(!showDetail)}
@@ -201,10 +277,9 @@ export default function DiscoverTab() {
                   </button>
                 </div>
 
-                {/* Bio / detail (mobile only — on desktop shown in sidebar) */}
                 {showDetail && (
                   <div className="md:hidden animate-slide-up">
-                    <p className="text-white/80 text-sm mb-3 leading-relaxed">{currentCard.bio}</p>
+                    {currentCard.bio && <p className="text-white/80 text-sm mb-3 leading-relaxed">{currentCard.bio}</p>}
                     <div className="flex flex-wrap gap-1.5">
                       {currentCard.interests.slice(0, 4).map(i => (
                         <span key={i} className="glass px-2 py-1 rounded-full text-xs text-white/70">{i}</span>
@@ -237,15 +312,14 @@ export default function DiscoverTab() {
         </div>
       </div>
 
-      {/* ── RIGHT: Profile detail panel (desktop only) ── */}
+      {/* ── RIGHT: Profile detail panel (desktop) ── */}
       <div className="hidden lg:flex flex-col w-80 xl:w-96 border-l border-white/5 overflow-y-auto flex-shrink-0">
         <div className="p-6">
-          {/* Profile header */}
           <div className="flex items-center gap-3 mb-5">
             <img src={currentCard.avatar} alt={currentCard.name}
               className="w-14 h-14 rounded-2xl object-cover" />
             <div>
-              <h3 className="text-white font-bold text-lg">{currentCard.name}, {currentCard.age}</h3>
+              <h3 className="text-white font-bold text-lg">{currentCard.name}, {currentCard.age || "?"}</h3>
               <div className="flex items-center gap-1 text-white/50 text-sm">
                 <Icon name="MapPin" size={12} />
                 <span>{currentCard.city}</span>
@@ -257,39 +331,39 @@ export default function DiscoverTab() {
           <div className="glass rounded-2xl p-4 mb-4 card-glow">
             <div className="flex items-center justify-between mb-2">
               <span className="text-white/60 text-sm">Совместимость</span>
-              <span className="gradient-text font-black text-xl">{currentCard.matchScore || 87}%</span>
+              <span className="gradient-text font-black text-xl">{(currentCard as User & { matchScore?: number }).matchScore ?? 87}%</span>
             </div>
             <div className="h-2 bg-white/10 rounded-full overflow-hidden">
               <div className="h-full btn-gradient rounded-full"
-                style={{ width: `${currentCard.matchScore || 87}%` }} />
+                style={{ width: `${(currentCard as User & { matchScore?: number }).matchScore ?? 87}%` }} />
             </div>
           </div>
 
-          {/* Bio */}
-          <div className="mb-4">
-            <h4 className="text-white/40 text-xs uppercase tracking-wider mb-2">О себе</h4>
-            <p className="text-white/70 text-sm leading-relaxed">{currentCard.bio}</p>
-          </div>
-
-          {/* Interests */}
-          <div className="mb-4">
-            <h4 className="text-white/40 text-xs uppercase tracking-wider mb-2">Интересы</h4>
-            <div className="flex flex-wrap gap-2">
-              {currentCard.interests.map(interest => (
-                <span key={interest}
-                  className="glass px-3 py-1 rounded-full text-xs text-white/70 border border-white/10">
-                  {interest}
-                </span>
-              ))}
+          {currentCard.bio && (
+            <div className="mb-4">
+              <h4 className="text-white/40 text-xs uppercase tracking-wider mb-2">О себе</h4>
+              <p className="text-white/70 text-sm leading-relaxed">{currentCard.bio}</p>
             </div>
-          </div>
+          )}
 
-          {/* Stats row */}
+          {currentCard.interests.length > 0 && (
+            <div className="mb-4">
+              <h4 className="text-white/40 text-xs uppercase tracking-wider mb-2">Интересы</h4>
+              <div className="flex flex-wrap gap-2">
+                {currentCard.interests.map(interest => (
+                  <span key={interest} className="glass px-3 py-1 rounded-full text-xs text-white/70 border border-white/10">
+                    {interest}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-3 gap-2 mb-5">
             {[
               { label: "Фото", value: currentCard.photos.length, icon: "Image" },
-              { label: "Возраст", value: currentCard.age, icon: "Calendar" },
-              { label: "км", value: currentCard.distance || "?", icon: "Navigation" },
+              { label: "Возраст", value: currentCard.age || "?", icon: "Calendar" },
+              { label: "Город", value: currentCard.city.slice(0, 6), icon: "MapPin" },
             ].map((s, i) => (
               <div key={i} className="glass rounded-xl p-2.5 text-center">
                 <Icon name={s.icon as never} size={14} className="text-white/40 mx-auto mb-1" />
@@ -299,22 +373,6 @@ export default function DiscoverTab() {
             ))}
           </div>
 
-          {/* Photos grid */}
-          <div className="mb-5">
-            <h4 className="text-white/40 text-xs uppercase tracking-wider mb-2">Фотографии</h4>
-            <div className="grid grid-cols-3 gap-2">
-              {currentCard.photos.map((photo, i) => (
-                <button key={i} onClick={() => setActivePhoto(i)}
-                  className={`aspect-square rounded-xl overflow-hidden transition-all ${
-                    activePhoto === i ? "ring-2 ring-pink-500" : "opacity-70 hover:opacity-100"
-                  }`}>
-                  <img src={photo} alt="" className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick actions */}
           <div className="flex gap-3">
             <button onClick={() => handleSwipe("left")}
               className="flex-1 glass rounded-2xl py-3 flex items-center justify-center gap-2 hover:bg-red-500/20 transition-all border border-white/10">
@@ -337,7 +395,7 @@ export default function DiscoverTab() {
             <div className="text-6xl mb-4">💥</div>
             <h2 className="font-caveat text-4xl font-bold gradient-text mb-2">Это матч!</h2>
             <p className="text-white/60 mb-6">Ты и {showMatch.user.name} понравились друг другу</p>
-            <div className="flex justify-center gap-4 mb-6">
+            <div className="flex justify-center mb-6">
               <div className="relative">
                 <img src={showMatch.user.avatar} className="w-20 h-20 rounded-2xl object-cover" alt="" />
                 <div className="absolute -bottom-2 -right-2 w-7 h-7 btn-gradient rounded-full flex items-center justify-center">
