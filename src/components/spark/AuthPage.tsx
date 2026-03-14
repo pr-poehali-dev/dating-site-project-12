@@ -1,7 +1,8 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
 import { User } from "@/types/spark";
-import { CURRENT_USER } from "@/data/mockData";
+import { api, setToken } from "@/lib/api";
+import { mapApiUser } from "@/pages/Index";
 
 interface Props {
   mode: 'login' | 'register';
@@ -25,27 +26,54 @@ export default function AuthPage({ mode, onSuccess, onBack, onSwitchMode }: Prop
     );
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError("");
-    if (!form.email || !form.password) {
-      setError("Заполните все поля");
+
+    if (mode === 'register') {
+      if (step === 1) {
+        if (!form.name || !form.email || !form.password) { setError("Заполните все поля"); return; }
+        if (form.password.length < 6) { setError("Пароль — минимум 6 символов"); return; }
+        setStep(2);
+        return;
+      }
+      if (step === 2) {
+        setStep(3);
+        return;
+      }
+      // Step 3 — финальная регистрация
+      setLoading(true);
+      try {
+        const data = await api.register({
+          email: form.email,
+          password: form.password,
+          name: form.name,
+          age: form.age ? parseInt(form.age) : undefined,
+          city: form.city,
+          bio: form.bio,
+          interests: selectedInterests,
+        });
+        setToken(data.token);
+        onSuccess(mapApiUser(data.user));
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "Ошибка регистрации");
+      } finally {
+        setLoading(false);
+      }
       return;
     }
-    if (mode === 'register' && step < 3) {
-      setStep(s => s + 1);
-      return;
-    }
+
+    // LOGIN
+    if (!form.email || !form.password) { setError("Заполните все поля"); return; }
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const data = await api.login(form.email, form.password);
+      setToken(data.token);
+      onSuccess(mapApiUser(data.user));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Ошибка входа");
+    } finally {
       setLoading(false);
-      onSuccess({
-        ...CURRENT_USER,
-        name: form.name || "Максим",
-        age: parseInt(form.age) || 27,
-        bio: form.bio || CURRENT_USER.bio,
-        interests: selectedInterests.length > 0 ? selectedInterests : CURRENT_USER.interests,
-      });
-    }, 1500);
+    }
   };
 
   const isRegister = mode === 'register';
@@ -60,12 +88,12 @@ export default function AuthPage({ mode, onSuccess, onBack, onSwitchMode }: Prop
           style={{ background: "radial-gradient(circle, #8B5CF6, transparent 70%)" }} />
       </div>
 
-      <div className="relative z-10 w-full max-w-md mx-auto px-6 animate-slide-up">
+      <div className="relative z-10 w-full max-w-md mx-auto px-6 py-8 animate-slide-up">
         {/* Back */}
-        <button onClick={onBack}
+        <button onClick={step > 1 ? () => setStep(s => s - 1) : onBack}
           className="flex items-center gap-2 text-white/50 hover:text-white mb-8 transition-colors">
           <Icon name="ArrowLeft" size={18} />
-          <span className="text-sm">Назад</span>
+          <span className="text-sm">{step > 1 ? "Назад" : "На главную"}</span>
         </button>
 
         {/* Logo */}
@@ -116,6 +144,7 @@ export default function AuthPage({ mode, onSuccess, onBack, onSwitchMode }: Prop
                   placeholder="твой@email.com"
                   value={form.email}
                   onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                  onKeyDown={e => e.key === "Enter" && handleSubmit()}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-white placeholder-white/30 outline-none focus:border-pink-500/50 transition-all"
                 />
               </div>
@@ -126,6 +155,7 @@ export default function AuthPage({ mode, onSuccess, onBack, onSwitchMode }: Prop
                   placeholder="••••••••"
                   value={form.password}
                   onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                  onKeyDown={e => e.key === "Enter" && handleSubmit()}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-white placeholder-white/30 outline-none focus:border-pink-500/50 transition-all"
                 />
               </div>
@@ -181,7 +211,7 @@ export default function AuthPage({ mode, onSuccess, onBack, onSwitchMode }: Prop
                 <h3 className="text-white font-bold text-xl">Твои интересы</h3>
                 <p className="text-white/50 text-sm">Выбери минимум 3</p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 mb-2">
                 {INTERESTS.map(interest => (
                   <button
                     key={interest}
@@ -196,52 +226,56 @@ export default function AuthPage({ mode, onSuccess, onBack, onSwitchMode }: Prop
                   </button>
                 ))}
               </div>
+              <p className="text-white/30 text-xs text-center mt-2">
+                Выбрано: {selectedInterests.length}
+              </p>
             </div>
           )}
 
+          {/* Error */}
           {error && (
-            <div className="mt-4 text-red-400 text-sm text-center">{error}</div>
+            <div className="mt-4 glass rounded-xl px-4 py-3 border border-red-500/30 animate-fade-in">
+              <p className="text-red-400 text-sm text-center">{error}</p>
+            </div>
           )}
 
+          {/* Submit button */}
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="w-full mt-6 btn-gradient text-white font-semibold py-4 rounded-2xl text-lg flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full btn-gradient text-white font-semibold py-4 rounded-2xl mt-6 flex items-center justify-center gap-2 disabled:opacity-60 transition-all"
           >
             {loading ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>{mode === 'login' ? "Входим..." : "Создаём профиль..."}</span>
+              </>
             ) : (
               <>
-                {isRegister && step < 3 ? "Далее" : isRegister ? "Создать аккаунт" : "Войти"}
-                <Icon name="ArrowRight" size={18} />
+                <Icon name={isRegister && step < 3 ? "ArrowRight" : "Zap"} size={18} />
+                <span>
+                  {!isRegister ? "Войти" : step < 3 ? "Далее" : "Создать аккаунт"}
+                </span>
               </>
             )}
           </button>
 
-          {/* Social auth */}
-          <div className="mt-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex-1 h-px bg-white/10" />
-              <span className="text-white/30 text-sm">или</span>
-              <div className="flex-1 h-px bg-white/10" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <button className="glass rounded-2xl py-3 flex items-center justify-center gap-2 hover:bg-white/10 transition-all">
-                <span className="text-lg">🇬</span>
-                <span className="text-white/70 text-sm">Google</span>
-              </button>
-              <button className="glass rounded-2xl py-3 flex items-center justify-center gap-2 hover:bg-white/10 transition-all">
-                <span className="text-lg">📱</span>
-                <span className="text-white/70 text-sm">Телефон</span>
-              </button>
-            </div>
-          </div>
-
-          <p className="text-center text-white/40 text-sm mt-5">
-            {isRegister ? "Уже есть аккаунт? " : "Нет аккаунта? "}
-            <button onClick={onSwitchMode} className="text-pink-400 hover:text-pink-300 transition-colors">
+          {/* Switch mode */}
+          <div className="text-center mt-5">
+            <span className="text-white/40 text-sm">
+              {isRegister ? "Уже есть аккаунт? " : "Нет аккаунта? "}
+            </span>
+            <button onClick={onSwitchMode}
+              className="text-pink-400 hover:text-pink-300 text-sm font-medium transition-colors">
               {isRegister ? "Войти" : "Зарегистрироваться"}
             </button>
+          </div>
+        </div>
+
+        {/* Social auth hint */}
+        <div className="mt-6 text-center">
+          <p className="text-white/20 text-xs">
+            Регистрируясь, ты соглашаешься с условиями использования
           </p>
         </div>
       </div>
