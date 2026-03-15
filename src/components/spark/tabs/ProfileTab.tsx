@@ -4,6 +4,12 @@ import { User } from "@/types/spark";
 import { CURRENT_USER } from "@/data/mockData";
 import { api } from "@/lib/api";
 import { mapApiUser } from "@/pages/Index";
+import PremiumModal from "../modals/PremiumModal";
+import VerificationModal from "../modals/VerificationModal";
+import FiltersModal from "../modals/FiltersModal";
+import LocationModal from "../modals/LocationModal";
+import ViewersModal from "../modals/ViewersModal";
+import LikesModal from "../modals/LikesModal";
 
 interface Props {
   user: User | null;
@@ -56,6 +62,9 @@ export default function ProfileTab({ user, onLogout, onUserUpdate }: Props) {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState(profile.avatar);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [modal, setModal] = useState<string | null>(null);
+  const [city, setCity] = useState("Москва");
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -179,7 +188,7 @@ export default function ProfileTab({ user, onLogout, onUserUpdate }: Props) {
                 <span>{profile.city}</span>
               </div>
               {!profile.premium && (
-                <button className="inline-flex items-center gap-2 glass border border-yellow-500/30 rounded-2xl px-4 py-2 hover:bg-yellow-500/10 transition-all">
+                <button onClick={() => setModal("premium")} className="inline-flex items-center gap-2 glass border border-yellow-500/30 rounded-2xl px-4 py-2 hover:bg-yellow-500/10 transition-all">
                   <Icon name="Crown" size={16} className="text-yellow-400" />
                   <span className="text-yellow-400 text-sm font-medium">Получить Spark Premium</span>
                 </button>
@@ -333,6 +342,7 @@ export default function ProfileTab({ user, onLogout, onUserUpdate }: Props) {
                 <div className="glass rounded-2xl overflow-hidden">
                   {group.items.map((item, idx) => (
                     <button key={idx}
+                      onClick={() => setModal(item.action)}
                       className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-all text-left border-b border-white/5 last:border-0">
                       <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
                         <Icon name={item.icon as never} size={16} className="text-white/60" />
@@ -360,6 +370,15 @@ export default function ProfileTab({ user, onLogout, onUserUpdate }: Props) {
           </button>
         </div>
       </div>
+
+      {modal === "premium" && <PremiumModal onClose={() => setModal(null)} />}
+      {modal === "verify" && <VerificationModal onClose={() => setModal(null)} />}
+      {modal === "filters" && <FiltersModal onClose={() => setModal(null)} />}
+      {modal === "location" && (
+        <LocationModal city={city} onClose={() => setModal(null)} onSave={c => setCity(c)} />
+      )}
+      {modal === "viewers" && <ViewersModal onClose={() => setModal(null)} onUpgrade={() => { setModal("premium"); }} />}
+      {modal === "likes" && <LikesModal onClose={() => setModal(null)} onUpgrade={() => { setModal("premium"); }} />}
     </div>
   );
 }

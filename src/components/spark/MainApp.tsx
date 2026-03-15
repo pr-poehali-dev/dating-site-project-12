@@ -6,6 +6,9 @@ import MatchesTab from "./tabs/MatchesTab";
 import ChatsTab from "./tabs/ChatsTab";
 import NotificationsTab from "./tabs/NotificationsTab";
 import ProfileTab from "./tabs/ProfileTab";
+import PremiumModal from "./modals/PremiumModal";
+import FiltersModal from "./modals/FiltersModal";
+import LocationModal from "./modals/LocationModal";
 import { MOCK_NOTIFICATIONS, CURRENT_USER } from "@/data/mockData";
 
 interface Props {
@@ -24,6 +27,10 @@ const tabs: { id: AppTab; label: string; icon: string; desc: string }[] = [
 
 export default function MainApp({ user, onLogout, onUserUpdate }: Props) {
   const [activeTab, setActiveTab] = useState<AppTab>("discover");
+  const [showPremium, setShowPremium] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [showLocation, setShowLocation] = useState(false);
+  const [city, setCity] = useState("Москва");
   const unreadNotifs = MOCK_NOTIFICATIONS.filter(n => !n.read).length;
   const profile = user || CURRENT_USER;
 
@@ -38,6 +45,7 @@ export default function MainApp({ user, onLogout, onUserUpdate }: Props) {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-background flex">
 
       {/* ── DESKTOP/TABLET SIDEBAR ── */}
@@ -100,7 +108,7 @@ export default function MainApp({ user, onLogout, onUserUpdate }: Props) {
               <span className="text-white font-semibold text-sm">Spark Premium</span>
             </div>
             <p className="text-white/50 text-xs mb-3 leading-relaxed">Безлимитные лайки, суперлайки и приоритетный показ</p>
-            <button className="w-full btn-gradient text-white text-xs font-semibold py-2.5 rounded-xl">
+            <button onClick={() => setShowPremium(true)} className="w-full btn-gradient text-white text-xs font-semibold py-2.5 rounded-xl">
               Попробовать бесплатно
             </button>
           </div>
@@ -140,15 +148,15 @@ export default function MainApp({ user, onLogout, onUserUpdate }: Props) {
           <div className="flex items-center gap-2">
             {activeTab === "discover" && (
               <>
-                <button className="glass w-9 h-9 rounded-xl flex items-center justify-center hover:bg-white/10 transition-all">
+                <button onClick={() => setShowFilters(true)} className="glass w-9 h-9 rounded-xl flex items-center justify-center hover:bg-white/10 transition-all">
                   <Icon name="SlidersHorizontal" size={16} className="text-white/70" />
                 </button>
-                <button className="glass w-9 h-9 rounded-xl flex items-center justify-center hover:bg-white/10 transition-all">
+                <button onClick={() => setShowLocation(true)} className="glass w-9 h-9 rounded-xl flex items-center justify-center hover:bg-white/10 transition-all">
                   <Icon name="MapPin" size={16} className="text-white/70" />
                 </button>
               </>
             )}
-            <button className="glass w-9 h-9 rounded-xl flex items-center justify-center hover:bg-white/10 transition-all">
+            <button onClick={() => setShowPremium(true)} className="glass w-9 h-9 rounded-xl flex items-center justify-center hover:bg-white/10 transition-all">
               <Icon name="Crown" size={16} className="text-yellow-400" />
             </button>
           </div>
@@ -165,17 +173,17 @@ export default function MainApp({ user, onLogout, onUserUpdate }: Props) {
           <div className="flex items-center gap-3">
             {activeTab === "discover" && (
               <>
-                <button className="glass px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-white/10 transition-all">
+                <button onClick={() => setShowFilters(true)} className="glass px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-white/10 transition-all">
                   <Icon name="SlidersHorizontal" size={15} className="text-white/70" />
                   <span className="text-white/70 text-sm">Фильтры</span>
                 </button>
-                <button className="glass px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-white/10 transition-all">
+                <button onClick={() => setShowLocation(true)} className="glass px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-white/10 transition-all">
                   <Icon name="MapPin" size={15} className="text-white/70" />
-                  <span className="text-white/70 text-sm">Москва</span>
+                  <span className="text-white/70 text-sm">{city}</span>
                 </button>
               </>
             )}
-            <button className="glass px-4 py-2 rounded-xl flex items-center gap-2 border border-yellow-500/30 hover:bg-yellow-500/10 transition-all">
+            <button onClick={() => setShowPremium(true)} className="glass px-4 py-2 rounded-xl flex items-center gap-2 border border-yellow-500/30 hover:bg-yellow-500/10 transition-all">
               <Icon name="Crown" size={15} className="text-yellow-400" />
               <span className="text-yellow-400 text-sm font-medium">Premium</span>
             </button>
@@ -224,5 +232,16 @@ export default function MainApp({ user, onLogout, onUserUpdate }: Props) {
         </div>
       </div>
     </div>
+
+    {showPremium && <PremiumModal onClose={() => setShowPremium(false)} />}
+    {showFilters && <FiltersModal onClose={() => setShowFilters(false)} />}
+    {showLocation && (
+      <LocationModal
+        city={city}
+        onClose={() => setShowLocation(false)}
+        onSave={c => setCity(c)}
+      />
+    )}
+    </>
   );
 }
