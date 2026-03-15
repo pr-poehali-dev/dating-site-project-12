@@ -1,4 +1,4 @@
-import { User, Match, Message, Notification } from "@/types/spark";
+import { User, Match, Message, Notification, Story } from "@/types/spark";
 
 export const PROFILE_IMAGES = {
   anna: "https://cdn.poehali.dev/projects/daf30b26-e2fb-4493-8352-aaed6ae45abe/files/77d914bc-3bd0-4671-97fa-14689e932031.jpg",
@@ -133,6 +133,93 @@ export const MOCK_MESSAGES: Message[] = [
   { id: "3", senderId: "1", text: "Да! Занимаюсь этим уже 5 лет. А ты чем занимаешься?", sentAt: "14:28", read: true },
   { id: "4", senderId: "me", text: "Работаю в IT. Кстати, фотографию очень люблю как хобби!", sentAt: "14:30", read: true },
   { id: "5", senderId: "1", text: "О, тогда нам точно есть о чём поговорить! Может встретимся за кофе? ☕", sentAt: "14:32", read: false },
+];
+
+export const MOCK_STORIES: Story[] = [
+  {
+    id: "s1",
+    userId: "1",
+    userName: "Анна",
+    userAvatar: PROFILE_IMAGES.anna,
+    mediaUrl: PROFILE_IMAGES.anna,
+    mediaType: "image",
+    caption: "Утро в Москве ☀️",
+    createdAt: "5 минут назад",
+    likes: ["me", "2"],
+    comments: [
+      { id: "c1", userId: "2", userName: "Катя", userAvatar: PROFILE_IMAGES.kate, text: "Как красиво! 😍", sentAt: "2 мин назад" },
+    ],
+    viewed: false,
+  },
+  {
+    id: "s2",
+    userId: "1",
+    userName: "Анна",
+    userAvatar: PROFILE_IMAGES.anna,
+    mediaUrl: PROFILE_IMAGES.masha,
+    mediaType: "image",
+    caption: "Новый проект 📸",
+    createdAt: "1 час назад",
+    likes: ["3"],
+    comments: [],
+    viewed: false,
+  },
+  {
+    id: "s3",
+    userId: "3",
+    userName: "Маша",
+    userAvatar: PROFILE_IMAGES.masha,
+    mediaUrl: PROFILE_IMAGES.masha,
+    mediaType: "image",
+    caption: "Йога с утра 🧘",
+    createdAt: "30 минут назад",
+    likes: ["me"],
+    comments: [
+      { id: "c2", userId: "me", userName: "Максим", userAvatar: PROFILE_IMAGES.alex, text: "Вдохновляет!", sentAt: "20 мин назад" },
+    ],
+    viewed: true,
+  },
+  {
+    id: "s4",
+    userId: "2",
+    userName: "Катя",
+    userAvatar: PROFILE_IMAGES.kate,
+    mediaUrl: PROFILE_IMAGES.kate,
+    mediaType: "image",
+    caption: "Новый дизайн-проект 🎨",
+    createdAt: "2 часа назад",
+    likes: [],
+    comments: [],
+    viewed: false,
+  },
+  {
+    id: "s5",
+    userId: "4",
+    userName: "Алекс",
+    userAvatar: PROFILE_IMAGES.alex,
+    mediaUrl: PROFILE_IMAGES.alex,
+    mediaType: "image",
+    caption: "Пробежка 5км 🏃",
+    createdAt: "3 часа назад",
+    likes: ["me", "1", "3"],
+    comments: [
+      { id: "c3", userId: "1", userName: "Анна", userAvatar: PROFILE_IMAGES.anna, text: "Молодец! 💪", sentAt: "1 час назад" },
+    ],
+    viewed: true,
+  },
+  {
+    id: "s6",
+    userId: "5",
+    userName: "Иван",
+    userAvatar: PROFILE_IMAGES.ivan,
+    mediaUrl: PROFILE_IMAGES.ivan,
+    mediaType: "image",
+    caption: "Вид с горы 🏔",
+    createdAt: "5 часов назад",
+    likes: ["2", "3"],
+    comments: [],
+    viewed: false,
+  },
 ];
 
 export const MOCK_NOTIFICATIONS: Notification[] = [

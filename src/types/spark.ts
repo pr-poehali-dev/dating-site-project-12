@@ -32,10 +32,27 @@ export interface Message {
   read: boolean;
 }
 
+export interface StoryComment {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  text: string;
+  sentAt: string;
+}
+
 export interface Story {
   id: string;
-  imageUrl: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  mediaUrl: string;
+  mediaType: 'image' | 'video';
+  caption?: string;
   createdAt: string;
+  likes: string[];
+  comments: StoryComment[];
+  viewed: boolean;
 }
 
 export interface Notification {

@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import Icon from "@/components/ui/icon";
-import { User } from "@/types/spark";
-import { DISCOVER_CARDS } from "@/data/mockData";
+import { User, Story } from "@/types/spark";
+import { DISCOVER_CARDS, MOCK_STORIES, CURRENT_USER } from "@/data/mockData";
 import { api, getToken } from "@/lib/api";
 import { mapApiUser } from "@/pages/Index";
+import StoriesRow from "../stories/StoriesRow";
 
 type SwipeDir = "left" | "right" | "up" | null;
 
@@ -23,6 +24,7 @@ export default function DiscoverTab() {
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
   const dragStart = useRef(0);
+  const [stories, setStories] = useState<Story[]>(MOCK_STORIES);
 
   useEffect(() => {
     if (!getToken()) {
@@ -146,24 +148,14 @@ export default function DiscoverTab() {
       {/* ── LEFT: Stories + Card stack ── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-        {/* Stories / avatars row */}
-        <div className="flex gap-3 px-4 py-3 overflow-x-auto scrollbar-hide flex-shrink-0">
-          <div className="flex-shrink-0 flex flex-col items-center gap-1">
-            <div className="w-14 h-14 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center bg-white/5">
-              <Icon name="Plus" size={20} className="text-white/40" />
-            </div>
-            <span className="text-white/40 text-[10px]">Моя</span>
-          </div>
-          {cards.slice(0, 7).map((card, i) => (
-            <div key={i} className="flex-shrink-0 flex flex-col items-center gap-1">
-              <div className="story-ring w-14 h-14">
-                <img src={card.avatar} alt={card.name}
-                  className="w-full h-full rounded-full object-cover border-2 border-background" />
-              </div>
-              <span className="text-white/50 text-[10px]">{card.name.split(" ")[0]}</span>
-            </div>
-          ))}
-        </div>
+        {/* Stories row */}
+        <StoriesRow
+          stories={stories}
+          currentUserId={CURRENT_USER.id}
+          currentUserName={CURRENT_USER.name}
+          currentUserAvatar={CURRENT_USER.avatar}
+          onStoriesUpdate={setStories}
+        />
 
         {/* Real users badge */}
         {usingReal && (
